@@ -50,6 +50,26 @@ def add_file_logger(logger, log_path):
 logger = setup_logger(__name__)
 
 
+def _env_bool(name: str, default: bool) -> bool:
+    """Parse boolean environment variables in a forgiving way.
+
+    Accepts: true/false, 1/0, yes/no, y/n, on/off (case-insensitive).
+    If the variable is unset, returns default.
+    """
+    raw = os.getenv(name)
+    if not raw:
+        return default
+
+    v = raw.strip().lower()
+    if v in {"1", "true", "t", "yes", "y", "on"}:
+        return True
+    if v in {"0", "false", "f", "no", "n", "off"}:
+        return False
+
+    msg = f"Invalid value for {name}={raw!r}. Expected a boolean (true/false, 1/0, yes/no, on/off)."
+    raise ValueError(msg)
+
+
 def authenticate():
     namespace = os.environ["ARGO_NAMESPACE"]
     if not namespace:
@@ -66,9 +86,13 @@ def authenticate():
     server = f"https://{os.environ['ARGO_SERVER']}"
     host = urljoin(server, base_href)
 
+    # Allow opting out of SSL verification (default stays True)
+    verify_ssl = _env_bool("ARGO_VERIFY_SSL", True)
+
     global_config.host = host
     global_config.token = token
     global_config.namespace = namespace
+    global_config.verify_ssl = verify_ssl
 
     return global_config
 
