@@ -57,7 +57,7 @@ def _env_bool(name: str, default: bool) -> bool:
     If the variable is unset, returns default.
     """
     raw = os.getenv(name)
-    if not raw:
+    if raw is None:
         return default
 
     v = raw.strip().lower()
@@ -66,11 +66,14 @@ def _env_bool(name: str, default: bool) -> bool:
     if v in {"0", "false", "f", "no", "n", "off"}:
         return False
 
-    msg = f"Invalid value for {name}={raw!r}. Expected a boolean (true/false, 1/0, yes/no, on/off)."
+    msg = (
+        f"Invalid value for {name}={raw!r}. "
+        "Expected a boolean (true/false, 1/0, yes/no, on/off)."
+    )
     raise ValueError(msg)
 
 
-def authenticate():
+def authenticate(verify_ssl: bool | None = None):
     namespace = os.environ["ARGO_NAMESPACE"]
     if not namespace:
         namespace = "dev"
@@ -86,8 +89,8 @@ def authenticate():
     server = f"https://{os.environ['ARGO_SERVER']}"
     host = urljoin(server, base_href)
 
-    # Allow opting out of SSL verification (default stays True)
-    verify_ssl = _env_bool("ARGO_VERIFY_SSL", True)
+    if verify_ssl is None:
+        verify_ssl = _env_bool("ARGO_VERIFY_SSL", global_config.verify_ssl)
 
     global_config.host = host
     global_config.token = token

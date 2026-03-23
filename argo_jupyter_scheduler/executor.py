@@ -1,6 +1,7 @@
 import os
 from typing import Dict, Union
 
+from hera.shared import global_config
 from hera.workflows import Container, CronWorkflow, Env, Step, Steps, Workflow, script
 from hera.workflows.models import ContinueOn, TTLStrategy, WorkflowStopRequest
 from hera.workflows.service import WorkflowsService
@@ -17,6 +18,7 @@ from jupyter_scheduler.utils import get_utc_timestamp
 
 from argo_jupyter_scheduler.utils import (
     WorkflowActionsEnum,
+    _env_bool,
     add_file_logger,
     authenticate,
     gen_cron_workflow_name,
@@ -193,7 +195,7 @@ class ArgoExecutor(ExecutionManager):
         # Configure logging to file first
         add_file_logger(logger, log_path)
 
-        authenticate()
+        authenticate(verify_ssl=_env_bool("ARGO_VERIFY_SSL", global_config.verify_ssl))
 
         logger.info("creating workflow...")
         logger.info(f"create time: {job.create_time}")
@@ -289,7 +291,9 @@ class ArgoExecutor(ExecutionManager):
         logger.info("workflow created")
 
     def delete_workflow(self, job_id: str):
-        global_config = authenticate()
+        global_cfg = authenticate(
+            verify_ssl=_env_bool("ARGO_VERIFY_SSL", global_config.verify_ssl)
+        )
 
         logger.info("deleting workflow...")
 
@@ -297,7 +301,7 @@ class ArgoExecutor(ExecutionManager):
             wfs = WorkflowsService()
             wfs.delete_workflow(
                 name=gen_workflow_name(job_id),
-                namespace=global_config.namespace,
+                namespace=global_cfg.namespace,
             )
         except Exception as e:
             # Hera-Workflows raises generic Exception for all errors :(
@@ -309,21 +313,23 @@ class ArgoExecutor(ExecutionManager):
         logger.info("workflow deleted")
 
     def stop_workflow(self, job_id):
-        global_config = authenticate()
+        global_cfg = authenticate(
+            verify_ssl=_env_bool("ARGO_VERIFY_SSL", global_config.verify_ssl)
+        )
 
         logger.info("stopping workflow...")
 
         try:
             req = WorkflowStopRequest(
                 name=gen_workflow_name(job_id),
-                namespace=global_config.namespace,
+                namespace=global_cfg.namespace,
             )
 
             wfs = WorkflowsService()
             wfs.stop_workflow(
                 name=gen_workflow_name(job_id),
                 req=req,
-                namespace=global_config.namespace,
+                namespace=global_cfg.namespace,
             )
         except Exception as e:
             # Hera-Workflows raises generic Exception for all errors :(
@@ -484,7 +490,7 @@ class ArgoExecutor(ExecutionManager):
         db_url: str,
         use_conda_store_env: bool = True,
     ):
-        authenticate()
+        authenticate(verify_ssl=_env_bool("ARGO_VERIFY_SSL", global_config.verify_ssl))
 
         logger.info("creating cron workflow...")
 
@@ -504,7 +510,9 @@ class ArgoExecutor(ExecutionManager):
         logger.info("cron workflow created")
 
     def delete_cron_workflow(self, job_definition_id: str):
-        global_config = authenticate()
+        global_cfg = authenticate(
+            verify_ssl=_env_bool("ARGO_VERIFY_SSL", global_config.verify_ssl)
+        )
 
         logger.info("deleting cron workflow...")
 
@@ -512,7 +520,7 @@ class ArgoExecutor(ExecutionManager):
             wfs = WorkflowsService()
             wfs.delete_cron_workflow(
                 name=gen_cron_workflow_name(job_definition_id),
-                namespace=global_config.namespace,
+                namespace=global_cfg.namespace,
             )
         except Exception as e:
             # Hera-Workflows raises generic Exception for all errors :(
@@ -534,7 +542,7 @@ class ArgoExecutor(ExecutionManager):
         db_url: str,
         use_conda_store_env: bool = True,
     ):
-        authenticate()
+        authenticate(verify_ssl=_env_bool("ARGO_VERIFY_SSL", global_config.verify_ssl))
 
         logger.info("updating cron workflow...")
 
